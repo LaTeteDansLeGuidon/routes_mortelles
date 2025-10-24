@@ -232,7 +232,7 @@ def analyser_accidents_commune(code_insee):
     total_enfants_intro = pietons_enfants_intro + cyclistes_enfants_intro
 
     rapport = f"""
-    Analyse des accidents routiers {ANNEE_ACCIDENT} pour la commune {nom_commune} :
+    # Analyse des accidents routiers {ANNEE_ACCIDENT} pour la commune {nom_commune} :
     
 L'année dernière, **{total_blesses_intro}** personnes dont **{total_enfants_intro} enfants** ont été blessées (ou tuées) dans des accidents de piétons ou cyclistes dans la ville :
     
@@ -315,7 +315,7 @@ st.markdown(
     "Un outil créé par [LtdlGuidon](https://piaille.fr/@LTDLGuidon), pour analyser les données d'accidentologie, avec un focus sur les personnes à pied ou à vélo. Les données sont disponibles en opendata [sur datagouv](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024/)." \
     "Le code est visible [sur Github](https://github.com/LaTeteDansLeGuidon/routes_mortelles)"
 )
-code_insee = st.text_input("Code INSEE de la commune (ex: 93051)", "93051")
+code_insee = st.text_input("Code INSEE de la commune (Par exemple pour Noisy-le-Grand : 93051)", "93051")
 
 
 if st.button("Analyser"):
