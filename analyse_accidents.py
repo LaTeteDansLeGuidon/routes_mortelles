@@ -307,10 +307,12 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
 #print(analyser_accidents_commune(code_INSEE))
 
 # Interface Streamlit
-
+st.set_page_config(
+        page_title="Routes mortelles",
+)
 st.title("Analyse des accidents routiers par commune")
 st.markdown(
-    "Une appli dévelopée par [LtdlGuidon](https://piaille.fr/@LTDLGuidon), pour analyser les données d'accidentologie, avec un focus sur les personnes à pied ou à vélo. Les données sont disponibles en opendata [sur datagouv](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024/)." \
+    "Un outil créé par [LtdlGuidon](https://piaille.fr/@LTDLGuidon), pour analyser les données d'accidentologie, avec un focus sur les personnes à pied ou à vélo. Les données sont disponibles en opendata [sur datagouv](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024/)." \
     "Le code est visible [sur Github](https://github.com/LaTeteDansLeGuidon/routes_mortelles)"
 )
 code_insee = st.text_input("Code INSEE de la commune (ex: 93051)", "93051")
