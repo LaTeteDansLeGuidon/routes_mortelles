@@ -313,8 +313,8 @@ st.set_page_config(
 st.title("Analyse des accidents routiers par commune")
 st.markdown(
     "Un outil créé par [LtdlGuidon](https://piaille.fr/@LTDLGuidon), pour analyser les données d'accidentologie, avec un focus sur les personnes à pied ou à vélo. Les données sont disponibles en opendata [sur datagouv](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024/).\n\n" \
-    "Le code est visible [sur Github](https://github.com/LaTeteDansLeGuidon/routes_mortelles). Il s'agit d'un travail amateur, des erreurs s'y glissent peut-être... Nh'ésitez pas à les signaler !\n\n"
-    "Pour accéder aux données d'une commune, taper son **code INSEE** puis appuyer sur le bouton **valider**. Attention, le code INSEE est différent du code postal !"
+    "Le code est visible [sur Github](https://github.com/LaTeteDansLeGuidon/routes_mortelles). Il s'agit d'un travail amateur, des erreurs s'y glissent peut-être... N'hésitez pas à les signaler !\n\n"
+    "Pour accéder aux données d'une commune, taper son **code INSEE** puis appuyer sur le bouton **valider**. Pour les communes ayant plusieurs codes INSEE comme Paris, les codes utilisés semblent être ceux des arrondissements. Attention, le code INSEE est différent du code postal !"
 )
 code_insee = st.text_input("**Code INSEE** de la commune (Par exemple pour Noisy-le-Grand : 93051)", "93051")
 
