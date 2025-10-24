@@ -1,0 +1,13 @@
+/.~lock.2024.csv#
+/.~lock.caract-2024.csv#
+/.~lock.usagers-2024.csv#
+/.~lock.vehicules-2024.csv#
+/2024.csv
+/accidents
+/analyse.py
+/analyse_accidents_v2.py
+/bus.py
+/description-des-bases-de-donnees-annuelles.pdf
+/import.py
+/import_donnees.py
+/test.py
