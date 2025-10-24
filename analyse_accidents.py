@@ -1,10 +1,11 @@
 # Code INSEE de la commune à analyser
 
-code_INSEE = 93051
+# code_INSEE = 93051
 
 import pandas as pd
 import sqlite3
 import requests
+import streamlit as st
 
 grav_dict = {1: 'Indemne', 2: 'Tué', 3: 'Blessé hospitalisé', 4: 'Blessé léger'}
 
@@ -99,7 +100,7 @@ def extraire_accidents_par_date(code_insee):
     # Étape 3 : Fusionner les données des victimes et des véhicules
     df = pd.merge(df_victimes, df_vehicules, on='Num_Acc', how='left')
 
-    print(df)
+    #print(df)
 
     # Étape 4 : Regrouper les codes catv selon catv_groupes
     def regrouper_vehicules(vehicules_catv_str):
@@ -230,51 +231,47 @@ def analyser_accidents_commune(code_insee):
     total_blesses_intro = pietons_blesses_intro + cyclistes_blesses_intro
     total_enfants_intro = pietons_enfants_intro + cyclistes_enfants_intro
 
-    # Création du paragraphe d'introduction
-    intro_paragraph = f"""L'année dernière, **{total_blesses_intro}** personnes dont **{total_enfants_intro} enfants** ont été blessées (ou tuées) dans des accidents de piétons ou cyclistes dans la ville :\n
-    🔵 **{pietons_blesses_intro} piétons** (dont **{pietons_enfants_intro} enfants**)\n
-    🔵 **{cyclistes_blesses_intro} cyclistes** (dont **{cyclistes_enfants_intro} enfants**)
-    """
-
     rapport = f"""
     Analyse des accidents routiers {ANNEE_ACCIDENT} pour la commune {nom_commune} :
     
-{intro_paragraph}
+L'année dernière, **{total_blesses_intro}** personnes dont **{total_enfants_intro} enfants** ont été blessées (ou tuées) dans des accidents de piétons ou cyclistes dans la ville :
+    
+🔵 **{pietons_blesses_intro} piétons** (dont **{pietons_enfants_intro} enfants**)
+    
+🔵 **{cyclistes_blesses_intro} cyclistes** (dont **{cyclistes_enfants_intro} enfants**)
 
-    ***
-
-    🚶 **Piétonnes et Piétons** :
-    Sur les **{pietons_blesses_intro}** piétonnes et piétons victimes (blessé·es ou tué·es), **{pietons.get('hospitalises', 0)}** ont été hospitalisé·es.
-    """
+## 🚶 Piétonnes et Piétons :
+Parmi les **{pietons_blesses_intro}** piétonnes et piétons blessé·es ou tué·es dans des accidents, **{pietons.get('hospitalises', 0)}** ont été hospitalisé·es
+"""
     # Ajout conditionnel des tués
     if pietons.get('tues', 0) > 0:
-        rapport += f"et **{pietons.get('tues', 0)}** sont mort·es.\n"
+        rapport += f", et **{pietons.get('tues', 0)}** sont mort·es.\n\n"
     else:
-        rapport += "\n"
+        rapport += ".\n\n"
 
-    rapport += "\n    Modes de transport impliqués :\n"
+    rapport += "### Véhicules impliqués :"
     if vehicules_pietons_groupes.empty:
-         rapport += "    * Aucune collision avec des véhicules externes enregistrée.\n"
+         rapport += "* Aucune collision avec des véhicules externes enregistrée.\n\n"
     for _, row in vehicules_pietons_groupes.iterrows():
-        rapport += f"    🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n"
+        rapport += f"🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n\n"
 
     rapport += f"""
-    ***
+## 🚴 **Cyclistes** :
+Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans des accidents,  **{cyclistes.get('hospitalises', 0)}** ont été hospitalisé·es
+"""
 
-    🚴 **Cyclistes** :
-    Sur les **{cyclistes_blesses_intro}** cyclistes victimes (blessé·es ou tué·es), **{cyclistes.get('hospitalises', 0)}** ont été hospitalisé·es.
-    """
     # Ajout conditionnel des tués
     if cyclistes.get('tues', 0) > 0:
-        rapport += f"et **{cyclistes.get('tues', 0)}** sont mort·es.\n"
+        rapport += f", et **{cyclistes.get('tues', 0)}** sont mort·es.\n\n"
     else:
-        rapport += "\n"
+        rapport += "\n\n"
 
-    rapport += "\n    Modes de transport impliqués :\n"
+    rapport += "### Véhicules impliqués :\n\n"
     if vehicules_cyclistes_groupes.empty:
-         rapport += "    * Aucune collision avec des véhicules externes enregistrée (victimes uniquement auto-accidentées ou indemnes).\n"
-    for _, row in vehicules_cyclistes_groupes.iterrows():
-        rapport += f"    🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n"
+        rapport += "- Aucune collision avec des véhicules externes enregistrée (victimes uniquement auto-accidentées ou indemnes).\n\n"
+    else:
+        for _, row in vehicules_cyclistes_groupes.iterrows():
+            rapport += f"🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n\n"
 
     # --- 6. Extraire et afficher les accidents par date ---
     df_accidents_par_date = extraire_accidents_par_date(code_insee)
@@ -282,12 +279,13 @@ def analyser_accidents_commune(code_insee):
 
     # Ajouter le tableau des accidents à la fin du rapport
     rapport += "\n\n"
-    rapport += "📅 **Liste des victimes recensées (triées par date) :**\n"
+    rapport += "### 📅 Liste des victimes piéton·nes et cyclistes recensées dans la commune(triées par date) :\n"
+
     if not df_accidents_par_date.empty:
         # Sélectionner les colonnes à afficher
         tableau = df_accidents_par_date[['Num_Acc', 'date_accident', 'type_usager', 'gravite_libelle', 'vehicules_impliques', 'latitude', 'longitude']]
         tableau = tableau.rename(columns={
-            'num_accident': 'ID Accident',
+            'Num_Acc': 'ID Accident',
             'date_accident': 'Date',
             'type_usager': 'Type usager',
             'gravite_libelle': 'Gravité',
@@ -295,15 +293,38 @@ def analyser_accidents_commune(code_insee):
             'latitude': 'Latitude',
             'longitude': 'Longitude'
         })
-        # Ajouter le tableau au rapport sous forme de chaîne
-        rapport += tableau.to_string()
+        # Ajouter le tableau au rapport sous forme de Markdown
+        rapport += "\n" + tableau.to_markdown(index=False)
     else:
-        rapport += "* Aucune victime recensée.\n"
+        rapport += "- Aucune victime recensée.\n"
+
 
     conn.close()
     return rapport
 
 # Exemple d'utilisation pour Noisy-le-Grand (code INSEE : 93051)
 
-print(analyser_accidents_commune(code_INSEE))
+#print(analyser_accidents_commune(code_INSEE))
+
+# Interface Streamlit
+
+st.title("Analyse des accidents routiers par commune")
+st.markdown(
+    "Une appli dévelopée par [LtdlGuidon](https://piaille.fr/@LTDLGuidon), pour analyser les données d'accidentologie, avec un focus sur les personnes à pied ou à vélo. Les données sont disponibles en opendata [sur datagouv](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024/)." \
+    "Le code est visible [sur Github](https://github.com/LaTeteDansLeGuidon/routes_mortelles)"
+)
+code_insee = st.text_input("Code INSEE de la commune (ex: 93051)", "93051")
+
+
+if st.button("Analyser"):
+
+    if len(code_insee) == 5 and code_insee.isdigit():
+        with st.spinner("Analyse en cours..."):
+            # Connexion directe à la base de données locale (dans le dépôt)
+            conn = sqlite3.connect('accidents_2024.db')
+            # Appel de ta fonction d'analyse
+            rapport = analyser_accidents_commune(code_insee)
+            st.markdown(rapport)
+    else:
+        st.error("Le code INSEE doit être un nombre à 5 chiffres.")
 
