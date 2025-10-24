@@ -56,7 +56,21 @@ def get_nom_commune(code_insee):
 
 def extraire_accidents_par_date(code_insee):
     conn = sqlite3.connect('accidents_2024.db')
-    query = f'''
+
+    # Étape 1 : Extraire les véhicules impliqués dans chaque accident
+    query_vehicules = f'''
+    SELECT
+        c.Num_Acc,
+        GROUP_CONCAT(DISTINCT v.catv) AS vehicules_catv
+    FROM vehicules v
+    JOIN caract c ON v.Num_Acc = c.Num_Acc
+    WHERE c.com = '{code_insee}'
+    GROUP BY c.Num_Acc
+    '''
+    df_vehicules = pd.read_sql_query(query_vehicules, conn)
+
+    # Étape 2 : Extraire les victimes (piétons et cyclistes)
+    query_victimes = f'''
     SELECT
         c.an AS annee,
         c.mois AS mois,
@@ -67,23 +81,47 @@ def extraire_accidents_par_date(code_insee):
             WHEN u.catu = 1 THEN 'Cycliste'
             ELSE 'Autre'
         END AS type_usager,
-        c.Num_Acc AS num_accident,
+        c.Num_Acc,
         c.lat AS latitude,
         c.long AS longitude,
-        GROUP_CONCAT(DISTINCT v.catv) AS vehicules_impliques
+        u.id_usager AS id_victime
     FROM usagers u
     JOIN caract c ON u.Num_Acc = c.Num_Acc
-    LEFT JOIN vehicules v ON u.Num_Acc = v.Num_Acc
-    WHERE u.grav != 1 AND (u.catu = 1 OR u.catu = 3) AND c.com = '{code_insee}'
-    GROUP BY c.Num_Acc, c.an, c.mois, c.jour, u.grav, u.catu
+    WHERE u.grav != 1 AND (u.catu = 3 OR (u.catu = 1 AND EXISTS (
+        SELECT 1 FROM vehicules v
+        WHERE v.Num_Acc = u.Num_Acc AND (v.catv = '01' OR v.catv = '80')
+    ))) AND c.com = '{code_insee}'
     ORDER BY c.an, c.mois, c.jour, c.hrmn
     '''
-    df = pd.read_sql_query(query, conn)
-    conn.close()
+    df_victimes = pd.read_sql_query(query_victimes, conn)
+
+
+    # Étape 3 : Fusionner les données des victimes et des véhicules
+    df = pd.merge(df_victimes, df_vehicules, on='Num_Acc', how='left')
+
+    print(df)
+
+    # Étape 4 : Regrouper les codes catv selon catv_groupes
+    def regrouper_vehicules(vehicules_catv_str):
+        if pd.isna(vehicules_catv_str):
+            return "Aucun véhicule"
+        vehicules_catv = vehicules_catv_str.split(',')
+        vehicules_groupes = set()
+        for catv in vehicules_catv:
+            catv_str = str(catv).zfill(2)
+            groupe = catv_groupes.get(catv_str, 'Autres')
+            vehicules_groupes.add(groupe)
+        return ', '.join(sorted(vehicules_groupes))
+
+    df['vehicules_impliques'] = df['vehicules_catv'].apply(regrouper_vehicules)
 
     # Formater la date en Python
     df['date_accident'] = df['annee'].astype(str) + '-' + df['mois'].astype(str).str.zfill(2) + '-' + df['jour'].astype(str).str.zfill(2)
+
+    conn.close()
     return df
+
+
 
 
 
@@ -244,10 +282,10 @@ def analyser_accidents_commune(code_insee):
 
     # Ajouter le tableau des accidents à la fin du rapport
     rapport += "\n\n"
-    rapport += "📅 **Liste des accidents recensés (triés par date) :**\n"
+    rapport += "📅 **Liste des victimes recensées (triées par date) :**\n"
     if not df_accidents_par_date.empty:
         # Sélectionner les colonnes à afficher
-        tableau = df_accidents_par_date[['num_accident', 'date_accident', 'type_usager', 'gravite_libelle', 'vehicules_impliques', 'latitude', 'longitude']]
+        tableau = df_accidents_par_date[['Num_Acc', 'date_accident', 'type_usager', 'gravite_libelle', 'vehicules_impliques', 'latitude', 'longitude']]
         tableau = tableau.rename(columns={
             'num_accident': 'ID Accident',
             'date_accident': 'Date',
@@ -258,9 +296,9 @@ def analyser_accidents_commune(code_insee):
             'longitude': 'Longitude'
         })
         # Ajouter le tableau au rapport sous forme de chaîne
-        rapport += tableau.to_string(index=False)
+        rapport += tableau.to_string()
     else:
-        rapport += "* Aucun accident recensé.\n"
+        rapport += "* Aucune victime recensée.\n"
 
     conn.close()
     return rapport
