@@ -55,8 +55,8 @@ def get_nom_commune(code_insee):
             return data[0]['nom']
     return "Nom non trouvé"
 
-def extraire_accidents_par_date(code_insee):
-    conn = sqlite3.connect('accidents_2024.db')
+def extraire_accidents_par_date(code_insee,annee):
+    conn = sqlite3.connect(f'accidents_{annee}.db')
 
     # Étape 1 : Extraire les véhicules impliqués dans chaque accident
     query_vehicules = f'''
@@ -83,6 +83,7 @@ def extraire_accidents_par_date(code_insee):
             ELSE 'Autre'
         END AS type_usager,
         c.Num_Acc,
+        c.adr AS adresse,
         c.lat AS latitude,
         c.long AS longitude,
         u.id_usager AS id_victime
@@ -126,12 +127,12 @@ def extraire_accidents_par_date(code_insee):
 
 
 
-def analyser_accidents_commune(code_insee):
+def analyser_accidents_commune(code_insee,annee):
     code_insee = str(code_insee)
     nom_commune = get_nom_commune(code_insee)
-    conn = sqlite3.connect('accidents_2024.db')
+    conn = sqlite3.connect(f'accidents_{annee}.db')
 
-    ANNEE_ACCIDENT = 2024
+    ANNEE_ACCIDENT = annee
     AGE_MAX_ENFANT = 18
     ANNEE_MIN_ENFANT = ANNEE_ACCIDENT - AGE_MAX_ENFANT
     
@@ -234,7 +235,7 @@ def analyser_accidents_commune(code_insee):
     rapport = f"""
     # Analyse des accidents routiers {ANNEE_ACCIDENT} pour la commune {nom_commune} :
     
-L'année dernière, **{total_blesses_intro}** personnes dont **{total_enfants_intro} enfants** ont été blessées (ou tuées) dans des accidents de piétons ou cyclistes dans la ville :
+En {annee}, **{total_blesses_intro}** personnes à pied ou à vélo dont **{total_enfants_intro} enfants** ont été blessées ou tuées dans la ville :
     
 🔵 **{pietons_blesses_intro} piétons** (dont **{pietons_enfants_intro} enfants**)
     
@@ -249,7 +250,7 @@ Parmi les **{pietons_blesses_intro}** piétonnes et piétons blessé·es ou tué
     else:
         rapport += ".\n\n"
 
-    rapport += "### Véhicules impliqués :"
+    rapport += "### Véhicules impliqués :\n\n"
     if vehicules_pietons_groupes.empty:
          rapport += "* Aucune collision avec des véhicules externes enregistrée.\n\n"
     for _, row in vehicules_pietons_groupes.iterrows():
@@ -274,7 +275,7 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
             rapport += f"🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n\n"
 
     # --- 6. Extraire et afficher les accidents par date ---
-    df_accidents_par_date = extraire_accidents_par_date(code_insee)
+    df_accidents_par_date = extraire_accidents_par_date(code_insee,annee)
     df_accidents_par_date['gravite_libelle'] = df_accidents_par_date['gravite'].map(grav_dict)
 
     # Ajouter le tableau des accidents à la fin du rapport
@@ -283,18 +284,21 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
 
     if not df_accidents_par_date.empty:
         # Sélectionner les colonnes à afficher
-        tableau = df_accidents_par_date[['Num_Acc', 'date_accident', 'type_usager', 'gravite_libelle', 'vehicules_impliques', 'latitude', 'longitude']]
+        tableau = df_accidents_par_date[['Num_Acc', 'date_accident', 'type_usager', 'gravite_libelle', 'vehicules_impliques', 'adresse', 'latitude', 'longitude']]
+        df_accidents_par_date['adresse_dupliquee'] = df_accidents_par_date.duplicated(subset=['adresse'], keep=False)
         tableau = tableau.rename(columns={
             'Num_Acc': 'ID Accident',
             'date_accident': 'Date',
             'type_usager': 'Type usager',
             'gravite_libelle': 'Gravité',
             'vehicules_impliques': 'Véhicules impliqués',
+            'adresse' : 'Adresse',
             'latitude': 'Latitude',
             'longitude': 'Longitude'
         })
         # Ajouter le tableau au rapport sous forme de Markdown
-        rapport += "\n" + tableau.to_markdown(index=False)
+        rapport += "\n\n" + tableau.to_markdown(index=False)
+        
     else:
         rapport += "- Aucune victime recensée.\n"
 
@@ -303,8 +307,9 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
     return rapport
 
 # Exemple d'utilisation pour Noisy-le-Grand (code INSEE : 93051)
-
-#print(analyser_accidents_commune(code_INSEE))
+# code_INSEE = 93051
+# annee = 2023
+# print(analyser_accidents_commune(code_INSEE,annee))
 
 # Interface Streamlit
 st.set_page_config(
@@ -314,19 +319,26 @@ st.title("Analyse des accidents routiers par commune")
 st.markdown(
     "Un outil créé par [LtdlGuidon](https://piaille.fr/@LTDLGuidon), pour analyser les données d'accidentologie, avec un focus sur les personnes à pied ou à vélo. Les données sont disponibles en opendata [sur datagouv](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024/).\n\n" \
     "Le code est visible [sur Github](https://github.com/LaTeteDansLeGuidon/routes_mortelles). Il s'agit d'un travail amateur, des erreurs s'y glissent peut-être... N'hésitez pas à les signaler !\n\n"
-    "Pour accéder aux données d'une commune, taper son **code INSEE** puis appuyer sur le bouton **valider**. Pour les communes ayant plusieurs codes INSEE comme Paris, les codes utilisés semblent être ceux des arrondissements. Attention, le code INSEE est différent du code postal !"
+    "Pour accéder aux données d'une commune, sélectionner une année, le **code INSEE** puis appuyer sur le bouton **valider**. Pour les communes ayant plusieurs codes INSEE comme Paris, les codes utilisés semblent être ceux des arrondissements. Attention, le code INSEE est différent du code postal !"
 )
+# Menu déroulant pour sélectionner l'année
+annees_disponibles = list(range(2023, 2025))
+index_par_defaut = annees_disponibles.index(annees_disponibles[-1])
+annee = st.selectbox("Sélectionnez l'année", annees_disponibles,index=index_par_defaut)
+
+# Champ de saisie pour le code INSEE
 code_insee = st.text_input("**Code INSEE** de la commune (Par exemple pour Noisy-le-Grand : 93051)", "93051")
 
-
+# Bouton pour lancer l'analyse
 if st.button("Analyser"):
 
     if len(code_insee) == 5 and code_insee.isdigit():
         with st.spinner("Analyse en cours..."):
+
             # Connexion directe à la base de données locale (dans le dépôt)
-            conn = sqlite3.connect('accidents_2024.db')
+            conn = sqlite3.connect(f'accidents_{annee}.db')
             # Appel de ta fonction d'analyse
-            rapport = analyser_accidents_commune(code_insee)
+            rapport = analyser_accidents_commune(code_insee,annee)
             st.markdown(rapport)
     else:
         st.error("Le code INSEE doit être un nombre à 5 chiffres.")
