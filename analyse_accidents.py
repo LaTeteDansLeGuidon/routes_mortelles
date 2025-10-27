@@ -35,6 +35,15 @@ catv_groupes = {
     '43': 'Autres', '50': 'Autres', '60': 'Autres', '99': 'Autres',
 }
 
+# Utilisation de session_state pour conserver les résultats d'analyse au téléchargement du csv
+if 'rapport_part1' not in st.session_state:
+    st.session_state.rapport_part1 = None
+if 'rapport_tableau' not in st.session_state:
+    st.session_state.rapport_tableau = None
+if 'tableau_to_csv' not in st.session_state:
+    st.session_state.tableau_to_csv = None
+
+
 def grouper_catv(df):
     """Regroupe les catégories de véhicules d'un DataFrame selon le dictionnaire catv_groupes et trie par nombre décroissant."""
     # S'assurer que le DataFrame n'est pas vide avant de tenter le regroupement
@@ -233,9 +242,9 @@ def analyser_accidents_commune(code_insee,annee):
     total_enfants_intro = pietons_enfants_intro + cyclistes_enfants_intro
 
     rapport = f"""
-    # Analyse des accidents routiers {ANNEE_ACCIDENT} pour la commune {nom_commune} :
+    # Analyse des accidents routiers {ANNEE_ACCIDENT} pour la commune de {nom_commune}
     
-En {annee}, **{total_blesses_intro}** personnes à pied ou à vélo dont **{total_enfants_intro} enfants** ont été blessées ou tuées dans la ville :
+En {annee}, **{total_blesses_intro}** personnes à pied ou à vélo dont **{total_enfants_intro} enfants** ont été blessées ou tuées dans la ville\xa0:
     
 🔵 **{pietons_blesses_intro} piétons** (dont **{pietons_enfants_intro} enfants**)
     
@@ -278,14 +287,13 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
     df_accidents_par_date = extraire_accidents_par_date(code_insee,annee)
     df_accidents_par_date['gravite_libelle'] = df_accidents_par_date['gravite'].map(grav_dict)
 
-    # Ajouter le tableau des accidents à la fin du rapport
-    rapport += "\n\n"
-    rapport += "### 📅 Liste des victimes piéton·nes et cyclistes recensées dans la commune(triées par date) :\n"
+    # # Ajouter le tableau des accidents à la fin du rapport
+    # rapport += "\n\n"
+    # rapport += "### 📅 Liste des victimes piéton·nes et cyclistes recensées dans la commune (triées par date) :\n"
 
     if not df_accidents_par_date.empty:
         # Sélectionner les colonnes à afficher
         tableau = df_accidents_par_date[['Num_Acc', 'date_accident', 'type_usager', 'gravite_libelle', 'vehicules_impliques', 'adresse', 'latitude', 'longitude']]
-        df_accidents_par_date['adresse_dupliquee'] = df_accidents_par_date.duplicated(subset=['adresse'], keep=False)
         tableau = tableau.rename(columns={
             'Num_Acc': 'ID Accident',
             'date_accident': 'Date',
@@ -296,16 +304,20 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
             'latitude': 'Latitude',
             'longitude': 'Longitude'
         })
-        # Ajouter le tableau au rapport sous forme de Markdown
-        rapport += "\n\n" + tableau.to_markdown(index=False)
+        # Sauvegarder une copie pour le CSV
+        tableau_to_csv = tableau.copy()
+
+        # Enlever latitude et longitude pour la visualisation web
+        tableau.drop(axis = 1, columns = ['Latitude','Longitude'],inplace=True)
         
+        # Ajouter le tableau au rapport sous forme de Markdown
+        rapport_tableau = "\n\n" + tableau.to_markdown(index=False)
     else:
-        rapport += "- Aucune victime recensée.\n"
+        rapport_tableau = "- Aucune victime recensée.\n"
 
 
     conn.close()
-    return rapport
-
+    return rapport,rapport_tableau, tableau_to_csv if not df_accidents_par_date.empty else None
 # Exemple d'utilisation pour Noisy-le-Grand (code INSEE : 93051)
 # code_INSEE = 93051
 # annee = 2023
@@ -331,15 +343,29 @@ code_insee = st.text_input("**Code INSEE** de la commune (Par exemple pour Noisy
 
 # Bouton pour lancer l'analyse
 if st.button("Analyser"):
-
     if len(code_insee) == 5 and code_insee.isdigit():
         with st.spinner("Analyse en cours..."):
-
-            # Connexion directe à la base de données locale (dans le dépôt)
-            conn = sqlite3.connect(f'accidents_{annee}.db')
-            # Appel de ta fonction d'analyse
-            rapport = analyser_accidents_commune(code_insee,annee)
-            st.markdown(rapport)
+            st.session_state.rapport_part1, st.session_state.rapport_tableau, st.session_state.tableau_to_csv = analyser_accidents_commune(code_insee, annee)
     else:
         st.error("Le code INSEE doit être un nombre à 5 chiffres.")
+
+# Affiche toujours le rapport s'il existe dans session_state
+if st.session_state.rapport_part1 is not None:
+    st.markdown(st.session_state.rapport_part1)
+    # Titre pour la section du tableau
+    st.markdown("### 📅 Liste des victimes piéton·nes et cyclistes recensées dans la commune (triées par date)")
+    # Bouton de téléchargement (juste sous le titre)
+    if st.session_state.tableau_to_csv is not None:
+        csv = st.session_state.tableau_to_csv.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Télécharger le tableau en CSV",
+            data=csv,
+            file_name=f'accidents_{code_insee}_{annee}.csv',
+            mime='text/csv',
+        )
+    # Afficher le tableau en Markdown (sans latitude/longitude)
+    st.markdown(st.session_state.rapport_tableau)
+
+
+
 
