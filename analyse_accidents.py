@@ -237,7 +237,7 @@ def analyser_accidents_commune(nom_commune,codes_insee, annee):
     total_blesses_intro = pietons_blesses_intro + cyclistes_blesses_intro
     rapport = f"""
 ## Analyse des accidents routiers {annee} pour la commune de {nom_commune}
-En {annee}, **{total_blesses_intro}** personnes à pied ou à vélo dont **{total_enfants_victimes} enfants** ont été blessées ou tuées dans la ville :\n\n
+En {annee}, **{total_blesses_intro} personnes** à pied ou à vélo dont **{total_enfants_victimes} enfants** ont été blessées ou tuées dans la ville :\n\n
 🔵 **{pietons_blesses_intro} piétons** (dont **{total_enfants_victimes_pietons} enfants**)\n\n
 🔵 **{cyclistes_blesses_intro} cyclistes** (dont **{total_enfants_victimes_cyclistes} enfants**)
 ## 🚶 Piétonnes et Piétons :
@@ -353,7 +353,7 @@ if st.session_state.rapport_part1 is not None:
 
     # Afficher le tableau détaillé si l'état est True
     if st.session_state.get("show_tableau", False):
-        st.markdown("### 📋 Liste des victimes piéton·nes et cyclistes recensées dans la commune (triées par date)")
+        st.markdown("### 📋 Liste des victimes piétonnes et cyclistes recensées dans la commune (tri par date)")
         if st.session_state.tableau_to_csv is not None:
             csv = st.session_state.tableau_to_csv.to_csv(index=False).encode('utf-8')
             st.download_button(
