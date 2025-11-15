@@ -237,27 +237,27 @@ def analyser_accidents_commune(nom_commune,codes_insee, annee):
     total_blesses_intro = pietons_blesses_intro + cyclistes_blesses_intro
     rapport = f"""
 ## Analyse des accidents routiers {annee} pour la commune de {nom_commune}
-En {annee}, **{total_blesses_intro} personnes** à pied ou à vélo dont **{total_enfants_victimes} enfants** ont été blessées ou tuées dans la ville :\n\n
-🔵 **{pietons_blesses_intro} piétons** (dont **{total_enfants_victimes_pietons} enfants**)\n\n
-🔵 **{cyclistes_blesses_intro} cyclistes** (dont **{total_enfants_victimes_cyclistes} enfants**)
+En {annee}, **{total_blesses_intro} personne{'s' if total_blesses_intro > 1  else ''}** à pied ou à vélo dont **{total_enfants_victimes} enfant{'s' if total_enfants_victimes > 1 else ''}** {'ont' if total_blesses_intro > 1 else 'a'} été blessée{'s' if total_blesses_intro > 1  else ''} ou tuée{'s' if total_blesses_intro > 1  else ''} dans la ville :\n\n
+🔵 **{pietons_blesses_intro} piéton{'s' if pietons_blesses_intro > 1  else ''}** (dont **{total_enfants_victimes_pietons} enfant{'s' if total_enfants_victimes_pietons > 1  else ''}**)\n\n
+🔵 **{cyclistes_blesses_intro} cycliste{'s' if cyclistes_blesses_intro > 1  else ''}** (dont **{total_enfants_victimes_cyclistes} enfant{'s' if total_enfants_victimes_cyclistes > 1  else ''}**)
 ## 🚶 Piétonnes et Piétons :
-Parmi les **{pietons_blesses_intro}** piétonnes et piétons blessé·es ou tué·es dans des accidents, **{pietons['hospitalises']}** ont été hospitalisé·es
+{'Parmi les' if pietons_blesses_intro > 1  else ''} **{pietons_blesses_intro}** piétonne{'s et' if total_blesses_intro > 1  else 'ou'} piéton{'s' if pietons_blesses_intro > 1  else ''} blessé·e{'s' if pietons_blesses_intro > 1  else ''} ou tué·e{'s' if pietons_blesses_intro > 1  else ''} dans {'des' if pietons_blesses_intro > 1 else 'un'} accident{'s' if pietons_blesses_intro > 1  else ''}, **{pietons['hospitalises']}** {'ont' if pietons['hospitalises'] > 1  else 'a'} été hospitalisé·e{'s' if pietons['hospitalises'] > 1  else ''}
     """
     if pietons['tues'] > 0:
-        rapport += f", et **{pietons['tues']}** sont mort·es.\n\n"
+        rapport += f", et **{pietons['tues']}** {'sont' if pietons['tues'] > 1  else 'est'} mort·e{'s' if pietons['tues'] > 1  else ''}.\n\n"
     else:
         rapport += ".\n\n"
     rapport += "### Véhicules impliqués :\n\n"
     if vehicules_pietons_groupes.empty:
         rapport += "* Aucune collision avec des véhicules externes enregistrée.\n\n"
     for _, row in vehicules_pietons_groupes.iterrows():
-        rapport += f"🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n\n"
+        rapport += f"🔵 {row['nombre']} accident{'s' if row['nombre'] > 1  else ''} impliquant un **{row['Mode_Transport']}**\n\n"
     rapport += f"""
 ## 🚴 **Cyclistes** :
-Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans des accidents, **{cyclistes['hospitalises']}** ont été hospitalisé·es
+{'Parmi les' if cyclistes_blesses_intro > 1  else ''} **{cyclistes_blesses_intro}** cycliste{'s' if cyclistes_blesses_intro > 1  else ''} blessé·e{'s' if cyclistes_blesses_intro > 1  else ''} ou tué·e{'s' if cyclistes_blesses_intro > 1  else ''} dans {'des' if cyclistes_blesses_intro > 1 else 'un'} accident{'s' if cyclistes_blesses_intro > 1  else ''}, **{cyclistes['hospitalises']}** {'ont' if cyclistes['hospitalises'] > 1  else 'a'} été hospitalisé·e{'s' if cyclistes['hospitalises'] > 1  else ''}
     """
     if cyclistes['tues'] > 0:
-        rapport += f", et **{cyclistes['tues']}** sont mort·es.\n\n"
+        rapport += f", et **{cyclistes['tues']}** {'sont' if cyclistes['tues'] > 1  else 'est'} mort·e{'s' if cyclistes['tues'] > 1  else ''}.\n\n"
     else:
         rapport += "\n\n"
     rapport += "### Véhicules impliqués :\n\n"
@@ -265,7 +265,7 @@ Parmi les **{cyclistes_blesses_intro}** cyclistes blessé·es ou tué·es dans d
         rapport += "- Aucune collision avec des véhicules externes enregistrée (victimes uniquement auto-accidentées ou indemnes).\n\n"
     else:
         for _, row in vehicules_cyclistes_groupes.iterrows():
-            rapport += f"🔵 {row['nombre']} accidents impliquant un **{row['Mode_Transport']}**\n\n"
+            rapport += f"🔵 {row['nombre']} accident{'s' if row['nombre'] > 1  else ''} impliquant un **{row['Mode_Transport']}**\n\n"
     # Extraire et afficher les accidents par date
     df_accidents_par_date = extraire_accidents_par_date(codes_insee, annee)
     df_accidents_par_date['gravite_libelle'] = df_accidents_par_date['gravite'].map(grav_dict)
